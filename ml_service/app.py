@@ -17,35 +17,20 @@ print("Model loaded!")
 def health():
     return jsonify({"status": "healthy", "service": "multimodal-demand-prediction"})
 
-# --- EVENT ADJUSTMENT LAYER ---
-def apply_event_adjustment(base_demand, event_type="none"):
-    """
-    Applies rule-based adjustments to the ML prediction.
-    Does NOT touch the model training or architecture.
-    """
-    event_type = event_type.lower() if event_type else "none"
-    
-    if event_type == "festival":
-        return base_demand * 1.25, "Festival Season (+25%)"
-    elif event_type == "calamity":
-        return base_demand * 0.60, "Natural Calamity (-40%)"
-    elif event_type == "competitor_launch":
-        return base_demand * 0.90, "Competitor Launch (-10%)"
-    elif event_type == "viral_positive":
-        return base_demand * 1.15, "Viral Trend (+15%)"
-    
-    return base_demand, "None"
-
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
         data = request.json
-        event_type = data.get('event_type', "none") # User selected event
         
         # --- PATH A: Custom LSTM Model (from Colab) ---
         if hasattr(demand_model, 'is_custom') and demand_model.is_custom:
             sales_history = data.get('sales_history', [])
-            MAX_VAL = 2500.0  
+            # Fix format: LSTM expects (1, 30, 1)
+            # Our web app might send raw numbers.
+            # If empty, mock it for demo
+            # INPUT SCALING TO MATCH COLAB TRAINING
+            # The model was trained on 0-1 data. We must normalize the raw input (e.g. 1500 aka Sales).
+            MAX_VAL = 2500.0  # Approximate max from dataset
             
             if not sales_history:
                 input_seq = np.random.rand(1, 30, 1)
@@ -53,22 +38,22 @@ def predict():
                 seq = sales_history[-30:]
                 if len(seq) < 30:
                     seq = [0]*(30-len(seq)) + seq
+                
+                # NORMALIZE HERE:
                 normalized_seq = np.array(seq) / MAX_VAL 
                 input_seq = normalized_seq.reshape(1, 30, 1)
             
-            # 1. Base ML Prediction
+            # Predict
             raw_pred = float(demand_model.model.predict(input_seq, verbose=0)[0][0])
-            base_pred = int(raw_pred * MAX_VAL)
             
-            # 2. Post-Prediction Adjustment Layer
-            final_pred, adjustment_reason = apply_event_adjustment(base_pred, event_type)
+            # OUTPUT SCALING (Denormalize)
+            pred = raw_pred * MAX_VAL 
             
             return jsonify({
-                "base_demand": base_pred,
-                "predicted_demand": int(final_pred),
-                "adjustment": adjustment_reason,
-                "confidence_interval": [int(final_pred * 0.9), int(final_pred * 1.1)],
-                "model_version": "custom-hm-trained-v1"
+                "predicted_demand": int(pred),
+                "confidence_interval": [int(pred * 0.9), int(pred * 1.1)],
+                "model_version": "custom-hm-trained-v1",
+                "note": "Using your Custom H&M Trained Model"
             })
 
         # --- PATH B: Default Multimodal Model (Legacy) ---
@@ -76,13 +61,14 @@ def predict():
         desc = data.get('description', "No description provided")
         tokenized = demand_model.preprocess_text([desc])
         
-        # 2. Preprocess Image
+        # 2. Preprocess Image (Mocking image loading for now)
+        # FIXED: Use Zero Placeholder
         image_data = np.zeros((1, 224, 224, 3), dtype=np.float32)
         
         # 3. Preprocess Time Series
         ts_data = np.random.rand(1, 30, 5).astype(np.float32)
 
-        # Predict (Base)
+        # Predict
         prediction = demand_model.model.predict({
             'input_ids': tokenized['input_ids'],
             'attention_mask': tokenized['attention_mask'],
@@ -90,18 +76,13 @@ def predict():
             'ts_input': ts_data
         }, verbose=0)
         
-        # De-normalize
+        # FIXED: De-normalize output
         MAX_SALES_SCALE = 2000000.0
-        base_value = float(prediction[0][0]) * MAX_SALES_SCALE
-        
-        # Post-Prediction Adjustment
-        final_value, reason = apply_event_adjustment(base_value, event_type)
+        predicted_value = float(prediction[0][0]) * MAX_SALES_SCALE
         
         return jsonify({
-            "base_demand": int(base_value),
-            "predicted_demand": int(final_value),
-            "adjustment": reason,
-            "confidence_interval": [final_value * 0.9, final_value * 1.1],
+            "predicted_demand": predicted_value,
+            "confidence_interval": [predicted_value * 0.9, predicted_value * 1.1],
             "model_version": "v1.0-multimodal-lstm-bert-mobilenet"
         })
 

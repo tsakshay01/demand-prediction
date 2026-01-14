@@ -6,7 +6,7 @@ echo ===================================================
 
 echo [1/3] Starting ML Service (Python)...
 :: Starts Python Flask app in a new window on Port 5000
-start "DemandAI ML Service" cmd /k "cd ml_service && python app.py"
+start "DemandAI ML Service" cmd /k "cd ml_service && c:\Users\tsaks\AppData\Local\Programs\Python\Python312\python.exe app.py"
 
 echo [2/3] Starting Web Backend (Node.js)...
 :: Starts Node.js Express app in a new window on Port 3000

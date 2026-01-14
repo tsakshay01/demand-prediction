@@ -26,7 +26,11 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000, // Relaxed for local dev
+    message: { error: "Too many requests, please try again later." } // Return JSON
+});
 app.use(limiter);
 
 // --- AUTH MIDDLEWARE ---

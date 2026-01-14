@@ -159,30 +159,6 @@
                 </div>
             </div>
 
-            <!-- Event Simulation Controls -->
-            <div class="glass-panel p-6 rounded-xl flex items-center justify-between border border-emerald-500/30">
-                <div class="flex items-center gap-4">
-                    <div class="p-3 bg-emerald-500/20 rounded-full text-emerald-400">
-                        <i data-lucide="sliders" class="w-6 h-6"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-white font-semibold">Event Simulation Layer</h3>
-                        <p class="text-xs text-slate-400">Adjust demand based on external factors (Rule-based)</p>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-4">
-                    <select id="eventSelector" onchange="updateForecast()"
-                        class="bg-slate-900 border border-slate-700 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5">
-                        <option value="none" selected>Normal Conditions</option>
-                        <option value="festival">🎉 Festival Season (+25%)</option>
-                        <option value="calamity">⛈️ Natural Calamity (-40%)</option>
-                        <option value="viral_positive">📈 Viral Trend (+15%)</option>
-                        <option value="competitor_launch">📉 Competitor Launch (-10%)</option>
-                    </select>
-                </div>
-            </div>
-
             <!-- Active Signal Indicators (Clean, Auto-detected) -->
             <div class="glass-panel p-4 rounded-xl flex items-center justify-between">
                 <div class="flex items-center gap-4">
@@ -206,15 +182,231 @@
 
             <script>
                 lucide.createIcons();
-                // ... (Auth/Logout remains same)
 
-                // ... (Chart init remains same)
+                // Auth Check
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user) window.location.href = 'login.html';
+
+                // FIX #4: Logout function defined at top level (not inside conditional)
+                function logout() {
+                    localStorage.clear();
+                    window.location.href = 'login.html';
+                }
+
+                document.getElementById('userName').innerText = user.name;
+                document.getElementById('userRole').innerText = user.role;
+                document.getElementById('userInitials').innerText = user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+                // Show Admin Link
+                if (user.role === 'admin') {
+                    document.getElementById('adminLink').classList.remove('hidden');
+                }
+
+
+                // --- Scenario Builder ---
+
+                function openScenarioBuilder() {
+                    document.getElementById('scenarioModal').classList.remove('hidden');
+                }
+
+                function closeScenarioBuilder() {
+                    document.getElementById('scenarioModal').classList.add('hidden');
+                }
+
+                async function handleScenarioSubmit(e) {
+                    e.preventDefault();
+
+                    const payload = {
+                        name: document.getElementById('evName').value,
+                        category: document.getElementById('evCategory').value,
+                        severity: document.getElementById('evSeverity').value,
+                        description: document.getElementById('evDesc').value
+                    };
+
+                    const btn = e.target.querySelector('button');
+                    const originalText = btn.innerText;
+                    btn.innerText = "Injecting Signal...";
+                    btn.disabled = true;
+
+                    try {
+                        const res = await fetch('/api/market-intelligence', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (res.ok) {
+                            closeScenarioBuilder();
+                            loadTrends(); // Refresh list
+                            e.target.reset(); // clear form
+                            alert("Event injected into Market Monitor.");
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert("Failed to inject event.");
+                    } finally {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }
+                }
+
+                async function deleteEvent() {
+                    if (!selectedTrend) return;
+                    if (!confirm(`Remove '${selectedTrend.name}' from monitor?`)) return;
+
+                    try {
+                        await fetch(`/api/market-intelligence/${selectedTrend.id}`, { method: 'DELETE' });
+                        // Reset UI
+                        selectedTrend = null;
+                        document.getElementById('selectedTrendInfo').classList.add('hidden');
+                        document.getElementById('noTrendSelected').classList.remove('hidden');
+                        document.getElementById('impactPanel').classList.remove('border-l-emerald-500', 'border-l-red-500', 'border-l-amber-500');
+                        loadTrends(); // Refresh list to remove it
+                    } catch (err) {
+                        console.error(err);
+                        alert("Failed to delete event.");
+                    }
+                }
+
+                // Chart
+                let mainChart;
+                let selectedTrend = null;
+
+                const ctx = document.getElementById('mainChart').getContext('2d');
+                mainChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
+                        datasets: [
+                            {
+                                label: 'Predicted',
+                                data: [1200, 1350, 1250, 1420, 1600, 1750, 1800, 1900, 2100, 2050, 2300],
+                                backgroundColor: '#10b981',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Actual',
+                                data: [1180, 1320, 1280, 1400, 1580, 1700, 1850, 1880, 2080, 2020, 2250],
+                                backgroundColor: '#334155',
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#64748b' } },
+                            y: { grid: { color: '#334155' }, ticks: { color: '#64748b' }, border: { display: false } }
+                        }
+                    }
+                });
+
+                // --- Market Intelligence Logic ---
+
+                // --- Load Stats ---
+                async function loadStats() {
+                    const token = localStorage.getItem('token');
+                    if (!token) return;
+
+                    try {
+                        const res = await fetch('/api/dashboard/stats', {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const stats = await res.json();
+
+                        document.getElementById('statTotalDemand').innerText = stats.totalDemand;
+                        document.getElementById('statAccuracy').innerText = stats.accuracy;
+                        document.getElementById('statTopProduct').innerText = stats.topProduct;
+
+                        // Update Growth Indicators randomly for demo effect
+                        document.getElementById('statGrowthDemand').innerText = stats.growth;
+
+                        // Dynamic Chart Update (History/Actuals)
+                        if (stats.chartData && mainChart && !isManualView) {
+                            // Update "Actual" dataset (Index 1) with 12-month history from DB
+                            // We align it to the last 12 points or slice as needed
+                            mainChart.data.datasets[1].data = stats.chartData;
+                            mainChart.update('none');
+                        }
+
+                    } catch (e) { console.error("Stats Load Error", e); }
+                }
+
+                // --- Market Intelligence Logic ---
+
+                async function loadTrends() {
+                    const token = localStorage.getItem('token');
+                    try {
+                        // New Endpoint with Auth
+                        const res = await fetch('/api/market-intelligence', {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        const trends = await res.json();
+                        renderTrends(trends);
+                    } catch (err) {
+                        console.error("Failed to load market data", err);
+                        document.getElementById('trendsList').innerHTML = '<div class="text-red-400 text-sm">System Offline. Check Connection.</div>';
+                    }
+                }
+
+                // --- Automated Signal Monitoring ---
+
+                async function monitorSignals() {
+                    try {
+                        // 1. Get Active Context
+                        const res = await fetch('/api/market-signals'); // Public endpoint (no auth needed technically, but good practice if mixed)
+                        const context = await res.json();
+
+                        updateBadges(context);
+
+                        // 2. Auto-Update Forecast (Silent Refresh)
+                        updateForecast();
+                    } catch (err) {
+                        console.error("Signal Monitor Error:", err);
+                    }
+                }
+
+                // NOTE: Polling logic moved to end of script (after variable declarations)
+
+                function updateBadges(context) {
+                    const wBadge = document.getElementById('badgeWeather');
+                    const sBadge = document.getElementById('badgeSocial');
+
+                    // Weather Logic
+                    if (context.weather.status === "CLEAR") {
+                        wBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-400";
+                        wBadge.innerHTML = `<i data-lucide="sun" class="w-3 h-3 text-emerald-400"></i> Clear`;
+                    } else if (context.weather.status === "RAIN") {
+                        wBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400 animate-pulse";
+                        wBadge.innerHTML = `<i data-lucide="cloud-rain" class="w-3 h-3"></i> Rain Detected`;
+                    } else if (context.weather.status === "STORM") {
+                        wBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-xs text-red-400 font-bold animate-pulse";
+                        wBadge.innerHTML = `<i data-lucide="cloud-lightning" class="w-3 h-3"></i> STORM ALERT`;
+                    }
+
+                    // Social Logic
+                    if (context.social.status === "NORMAL") {
+                        sBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-400";
+                        sBadge.innerHTML = `<i data-lucide="message-square" class="w-3 h-3"></i> Stable`;
+                    } else if (context.social.status === "VIRAL_NEGATIVE") {
+                        sBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-xs text-orange-400 animate-pulse";
+                        sBadge.innerHTML = `<i data-lucide="trending-down" class="w-3 h-3"></i> Negative Buzz`;
+                    } else if (context.social.status === "VIRAL_POSITIVE") {
+                        sBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400";
+                        sBadge.innerHTML = `<i data-lucide="trending-up" class="w-3 h-3"></i> Viral Trend`;
+                    }
+                    lucide.createIcons();
+                }
 
                 async function updateForecast() {
                     try {
+                        // Determine logic from Active Context (done on backend now)
                         const user = JSON.parse(localStorage.getItem('user'));
                         const token = localStorage.getItem('token');
-                        const eventType = document.getElementById('eventSelector').value;
 
                         if (!user || !token) {
                             window.location.href = 'login.html';
@@ -227,10 +419,7 @@
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${token}`
                             },
-                            body: JSON.stringify({
-                                context: "auto_refresh",
-                                event_type: eventType // Send event choice
-                            })
+                            body: JSON.stringify({ context: "auto_refresh" })
                         });
                         const data = await res.json();
                         console.log("🔥 DEBUG: Prediction API Response:", data);
@@ -240,39 +429,8 @@
 
                         // Retrieve prediction from Backend
                         let predictedVal = 1250; // default
-                        let baseVal = 1250;
-
                         if (data.predicted_demand) {
                             predictedVal = data.predicted_demand;
-                            baseVal = data.base_demand || predictedVal;
-
-                            // UI UPDATE: Show Base vs Adjusted
-                            const label = data.adjustment !== "None" ? data.adjustment : "No Adjustment";
-
-                            // Update the Stats Card to show SPLIT VIEW
-                            const demandCard = document.getElementById('statTotalDemand').parentElement;
-                            document.getElementById('statTotalDemand').innerText = predictedVal.toLocaleString();
-
-                            // Add/Update specific adjustment UI
-                            let adjEl = document.getElementById('adj-indicator');
-                            if (!adjEl) {
-                                adjEl = document.createElement('div');
-                                adjEl.id = 'adj-indicator';
-                                adjEl.className = "mt-2 text-xs p-2 bg-slate-800 rounded border border-slate-700";
-                                demandCard.appendChild(adjEl);
-                            }
-
-                            if (eventType !== 'none') {
-                                adjEl.innerHTML = `
-                                    <div class="flex justify-between"><span>Base(ML):</span> <span class="text-slate-400">${baseVal.toLocaleString()}</span></div>
-                                    <div class="flex justify-between font-bold ${predictedVal > baseVal ? 'text-emerald-400' : 'text-red-400'}">
-                                        <span>User Event:</span> <span>${label}</span>
-                                    </div>
-                                `;
-                            } else {
-                                adjEl.innerHTML = `<span class="text-slate-500">No manual events active</span>`;
-                            }
-
                             console.log("✅ Using Real Prediction:", predictedVal);
                         } else {
                             console.warn("⚠️ No predicted_demand in response, using default.");
