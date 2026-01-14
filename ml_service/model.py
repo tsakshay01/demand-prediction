@@ -2,6 +2,7 @@ import os
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
 import tensorflow as tf
 from tensorflow.keras import layers, models, Model
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from transformers import TFDistilBertModel, DistilBertTokenizer
 import numpy as np
 import os
@@ -11,42 +12,58 @@ class MultimodalDemandModel:
         self.is_custom = False
         self.model = None
         self.transformer_layer = None
+        self.scaler = None
+        self.scaler_path = 'ml_service/scaler.pkl'
         
         try:
-            self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+            import joblib
+            if os.path.exists(self.scaler_path):
+                self.scaler = joblib.load(self.scaler_path)
+                print(f"✅ Loaded Scaler from {self.scaler_path}")
+            else:
+                from sklearn.preprocessing import MinMaxScaler
+                self.scaler = MinMaxScaler(feature_range=(0, 1))
+                print("⚠️ No scaler found. initialized new scaler.")
         except Exception as e:
-            print(f"⚠️ Tokenizer load failed: {e}. Using mock tokenizer.")
+            print(f"⚠️ Scaler load error: {e}")
+            from sklearn.preprocessing import MinMaxScaler
+            self.scaler = MinMaxScaler()
+
+        try:
+            self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+            # FIXED: Actually load the BERT model
+            pass # Placeholder to avoid indentation error if I just delete
+            from transformers import TFDistilBertModel
+            self.transformer_layer = TFDistilBertModel.from_pretrained('distilbert-base-uncased')
+            print("✅ DistilBERT Loaded Successfully")
+        except Exception as e:
+            print(f"⚠️ BERT/Tokenizer framework load failed: {e}. Using mock/fallback.")
             self.tokenizer = None
+            self.transformer_layer = None
         
-        # Check if custom trained model exists
-        if os.path.exists(model_path):
-            try:
-                print(f"🔥 Loading Custom Trained Model from {model_path}...")
-                self.model = tf.keras.models.load_model(model_path)
-                self.is_custom = True
-                print("✅ Custom model loaded successfully!")
-            except Exception as e:
-                print(f"⚠️ Failed to load custom model: {e}")
-                self.model = None
+        # --- ARCHITECTURE FIRST (Production Pattern) ---
+        print("⚙️ Building Multimodal Architecture...")
+        self.model = self.build_model()
+        self.weights_path = 'ml_service/model_weights.h5'
         
-        # Build default model only if custom didn't load
-        if self.model is None:
-            print("⚙️ Building default multimodal architecture...")
-            try:
-                self.model = self.build_model()
-                self.weights_path = 'ml_service/model_weights.h5'
-                self.load_weights()
-            except Exception as e:
-                print(f"⚠️ Model build failed: {e}. Running in MOCK mode.")
-                self.model = None
+        # Load Weights (Safe)
+        if os.path.exists(self.weights_path):
+            print(f"🔥 Loading trained weights from {self.weights_path}...")
+            self.load_weights()
+        else:
+            print("⚠️ No weights found. Running with random initialization (Untrained).")
 
     def save_weights(self):
         try:
             self.model.save_weights(self.weights_path)
             print(f"Model weights saved to {self.weights_path}")
+            # Save Scaler too
+            import joblib
+            joblib.dump(self.scaler, self.scaler_path)
+            print(f"Scaler saved to {self.scaler_path}")
             return True
         except Exception as e:
-            print(f"Failed to save weights: {e}")
+            print(f"Failed to save state: {e}")
             return False
 
     def load_weights(self):
@@ -181,7 +198,8 @@ class MultimodalDemandModel:
                         # Load and resize using Keras utility
                         img = tf.keras.preprocessing.image.load_img(path, target_size=(224, 224))
                         img_arr = tf.keras.preprocessing.image.img_to_array(img)
-                        images[idx] = img_arr / 255.0 # Normalize [0,1]
+                        # FIXED: Use MobileNetV2 standard preprocessing ([-1, 1])
+                        images[idx] = preprocess_input(img_arr)
                     else:
                         # FIXED: Use Zero Placeholder instead of Random Noise
                         images[idx] = np.zeros((224, 224, 3), dtype=np.float32)
@@ -196,17 +214,34 @@ class MultimodalDemandModel:
         # 3. TS Process
         # Ensure shape (Batch, 30, 5) - we only have 1 variable (sales), so we pad features
         ts_data = np.zeros((num_samples, 30, 5), dtype=np.float32)
-        MAX_SALES_SCALE = 2000000.0 # Support Enterprise Data (Requested 2M)
         
+        # Collect all sales data for scaling
+        all_sales = []
+        for hist in sales_histories:
+            all_sales.extend(hist)
+        # Also include targets in fitting to cover full range
+        all_sales.extend(targets)
+        
+        # Fit Scaler
+        print("Fitting Scaler on fresh data...")
+        self.scaler.fit(np.array(all_sales).reshape(-1, 1))
+        
+        # Transform Inputs
         for i, hist in enumerate(sales_histories):
-            # Fill first feature with history
-            hist_arr = np.array(hist[-30:]) # specific length
+            hist_arr = np.array(hist[-30:]).reshape(-1, 1)
             if len(hist_arr) < 30:
-                hist_arr = np.pad(hist_arr, (30-len(hist_arr), 0))
+                # Pad with zeros (which are 0.0 in scaled terms roughly if min is 0)
+                # Better: Pad before scaling? For now, simplistic padding.
+                scaled_hist = self.scaler.transform(hist_arr)
+                pad_width = 30 - len(scaled_hist)
+                scaled_hist = np.pad(scaled_hist, ((pad_width, 0), (0, 0)), mode='constant')
+            else:
+                scaled_hist = self.scaler.transform(hist_arr)
             
-            # FIXED: Normalize Time Series
-            ts_data[i, :, 0] = hist_arr / MAX_SALES_SCALE
-            # Other 4 features remain 0 or random
+            ts_data[i, :, 0] = scaled_hist.flatten()
+            
+        # Transform Targets
+        scaled_targets = self.scaler.transform(targets.reshape(-1, 1))
             
         print(f"Starting Training on {num_samples} samples for {epochs} epochs...")
         history = self.model.fit(
@@ -216,7 +251,7 @@ class MultimodalDemandModel:
                 'image_input': images,
                 'ts_input': ts_data
             },
-            targets / MAX_SALES_SCALE, # FIXED: Normalize Targets to 0-1 matches app.py logic
+            scaled_targets,
             epochs=epochs,
             batch_size=8,
             validation_split=0.2

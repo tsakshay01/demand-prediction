@@ -6,9 +6,7 @@ echo.
 echo Step 1: Go to https://github.com/new and create a repository.
 echo         Name it 'demand-prediction'.
 echo.
-set /p REPO_URL="Step 2: Paste the HTTPS URL here (e.g. https://github.com/User/repo.git): "
-
-if "%REPO_URL%"=="" goto error
+set REPO_URL=https://github.com/tsakshay01/demand-prediction.git
 
 echo.
 echo Connecting to GitHub...
