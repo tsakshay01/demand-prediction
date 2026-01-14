@@ -223,25 +223,49 @@ app.post('/api/upload', verifyToken, upload.single('file'), async (req, res) => 
         const newFile = {
             id: this.lastID,
             originalName: req.file.originalname,
-            status: 'Processed'
+            status: 'Uploaded'
         };
 
         // --- ML PREDICTION TRIGGER ---
         let predictionData = null;
+        let mlError = null;
+
         if (req.file.mimetype === 'text/csv' || req.file.originalname.endsWith('.csv')) {
             try {
                 const fullPath = path.resolve(req.file.path);
-                if (axios) {
-                    const mlRes = await axios.post(`${ML_SERVICE_URL}/predict_csv`, { file_path: fullPath });
-                    if (mlRes.data && mlRes.data.success) {
-                        predictionData = mlRes.data;
-                    }
+                if (!axios) {
+                    throw new Error("Axios not installed - ML features disabled");
+                }
+
+                // First, check if ML service is alive
+                try {
+                    await axios.get(`${ML_SERVICE_URL}/health`, { timeout: 3000 });
+                } catch (healthErr) {
+                    throw new Error("ML Service is not running. Please start the Python service on port 5000.");
+                }
+
+                // ML service is up, proceed with prediction
+                const mlRes = await axios.post(`${ML_SERVICE_URL}/predict_csv`, { file_path: fullPath }, { timeout: 60000 });
+                if (mlRes.data && mlRes.data.success) {
+                    predictionData = mlRes.data;
+                    newFile.status = 'Predicted';
+                } else {
+                    throw new Error(mlRes.data?.error || "ML returned invalid response");
                 }
             } catch (err) {
-                console.error("ML Error", err.message);
+                console.error("ML Error:", err.message);
+                mlError = err.message;
+                newFile.status = 'ML Error';
             }
         }
-        res.json({ success: true, file: newFile, prediction: predictionData });
+
+        // EXPLICIT response with error info
+        res.json({
+            success: true,
+            file: newFile,
+            prediction: predictionData,
+            ml_error: mlError  // NEW: Explicit error field
+        });
     });
     stmt.finalize();
 });

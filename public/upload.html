@@ -253,9 +253,15 @@
                     pBar.style.width = '0%';
 
                     console.log("DEBUG: Upload response:", data);
-                    console.log("DEBUG: Has prediction?", data.prediction);
 
                     loadFiles();
+
+                    // NEW: Check for ML error first
+                    if (data.ml_error) {
+                        console.error("ML ERROR:", data.ml_error);
+                        alert('⚠️ ML Service Error:\n\n' + data.ml_error + '\n\nFile was saved but NO prediction was generated.\nPlease ensure the Python ML service is running on port 5000.');
+                        return;
+                    }
 
                     if (data.prediction && data.prediction.success) {
                         console.log("DEBUG: Storing prediction data...");
@@ -266,18 +272,19 @@
                             timestamp: Date.now()
                         }));
 
-                        // Show Prediction Result & Redirect (Directly as requested)
-                        // console.log("Success, redirecting...");
+                        // Show Prediction Result & Redirect
                         window.location.href = 'index.html?view=prediction';
                     } else {
-                        console.log("DEBUG: No prediction data, showing simple success");
-                        alert('Upload Successful! File stored safely.');
+                        console.log("DEBUG: No prediction data");
+                        alert('✅ Upload Successful!\n\nFile stored. No prediction was requested (non-CSV or ML unavailable).');
                     }
                 }, 500);
 
             } catch (err) {
                 console.error(err);
-                alert('Upload Failed');
+                clearInterval(interval);
+                document.getElementById('uploadProgress').classList.add('hidden');
+                alert('❌ Upload Failed: ' + err.message);
             }
         }
 
