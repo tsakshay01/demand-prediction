@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DemandAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        emerald: { 950: '#022c22' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen bg-slate-900 selection:bg-emerald-500 selection:text-white">
+
+    <div class="w-full max-w-md p-8 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
+        <div class="text-center mb-8">
+            <div
+                class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 mb-4">
+                <i data-lucide="brain-circuit" class="w-6 h-6"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white">Welcome back</h1>
+            <p class="text-slate-400 text-sm mt-2">Sign in to access your analytics</p>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1.5">Email</label>
+                <input type="email" id="email" required
+                    class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all placeholder-slate-600"
+                    placeholder="admin@demand.ai">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1.5">Password</label>
+                <input type="password" id="password" required
+                    class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all placeholder-slate-600"
+                    placeholder="••••••••">
+            </div>
+
+            <button type="submit" id="submitBtn"
+                class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                Sign In
+            </button>
+        </form>
+
+        <p class="mt-6 text-center text-sm text-slate-400">
+            No account? <a href="signup.html" class="text-emerald-400 hover:text-emerald-300 font-medium">Create one</a>
+        </p>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            btn.disabled = true;
+            btn.innerText = 'Verifying...';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (data.success || data.token) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem('token', data.token);
+                    // Role based redirect
+                    if (data.user.role === 'admin') {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    alert(data.message);
+                    btn.disabled = false;
+                    btn.innerText = 'Sign In';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Server error');
+                btn.disabled = false;
+                btn.innerText = 'Sign In';
+            }
+        });
+    </script>
+</body>
+
+</html>

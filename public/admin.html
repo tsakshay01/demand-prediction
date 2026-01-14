@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal - DemandAI</title>
+    <!-- Fonts & Tailwind -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col fixed h-full">
+        <div class="h-16 flex items-center px-6 border-b border-slate-800">
+            <div class="flex items-center gap-2 text-rose-500 font-bold text-xl">
+                <i data-lucide="shield-check" class="w-7 h-7"></i>
+                <span>AdminPortal</span>
+            </div>
+        </div>
+        <nav class="flex-1 py-6 space-y-1">
+            <a href="#"
+                class="flex items-center gap-3 px-6 py-3 text-slate-100 bg-slate-800 border-r-2 border-rose-500">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span class="font-medium">Overview</span>
+            </a>
+            <a href="../upload.html"
+                class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-900 transition">
+                <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                <span class="font-medium">Uploads</span>
+            </a>
+            <a href="index.html"
+                class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-900 transition">
+                <i data-lucide="external-link" class="w-5 h-5"></i>
+                <span class="font-medium">User View</span>
+            </a>
+            <a href="analytics.html"
+                class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-900 transition mb-1">
+                <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                <span class="font-medium">Analytics</span>
+            </a>
+        </nav>
+        <div class="p-6 border-t border-slate-800">
+            <button onclick="logout()" class="flex items-center gap-2 text-slate-400 hover:text-white transition">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="ml-64 flex-1 p-8">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold">System Overview</h1>
+                <p class="text-slate-400">Manage users and system resources</p>
+            </div>
+            <div class="px-4 py-2 bg-slate-900 rounded-lg border border-slate-800 text-sm">
+                <span class="text-slate-400">Server Status:</span>
+                <span class="text-emerald-400 font-medium ml-2 mr-4">● Online</span>
+                <span class="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-1 rounded">
+                    <i data-lucide="zap" class="w-3 h-3 inline mr-1"></i> TFT Model
+                </span>
+                <button onclick="triggerTraining()"
+                    class="ml-4 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded transition-colors">
+                    <i data-lucide="refresh-cw" class="w-3 h-3 inline mr-1"></i> Retrain Model
+                </button>
+            </div>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+                <p class="text-slate-400 text-sm">Total Users</p>
+                <h3 class="text-3xl font-bold mt-2" id="totalUsers">-</h3>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+                <p class="text-slate-400 text-sm">Active Models</p>
+                <h3 class="text-3xl font-bold mt-2 text-blue-400" id="activeModels">-</h3>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+                <p class="text-slate-400 text-sm">System Health</p>
+                <h3 class="text-3xl font-bold mt-2 text-emerald-400" id="systemHealth">-</h3>
+            </div>
+        </div>
+
+        <!-- User Table -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="font-semibold">Registered Users</h3>
+                <button onclick="handleRefreshUserList(this)"
+                    class="text-sm text-blue-400 hover:text-white flex items-center gap-1">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh
+                </button>
+            </div>
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-950 text-slate-400">
+                    <tr>
+                        <th class="px-6 py-3">User</th>
+                        <th class="px-6 py-3">Role</th>
+                        <th class="px-6 py-3">Joined</th>
+                        <th class="px-6 py-3 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800" id="userList">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Recent Uploads (Admin View) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden mt-8">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="font-semibold">System Files</h3>
+                <span class="text-xs text-slate-500">Shared Storage</span>
+            </div>
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-950 text-slate-400">
+                    <tr>
+                        <th class="px-6 py-3">File</th>
+                        <th class="px-6 py-3">Owner</th>
+                        <th class="px-6 py-3">Size</th>
+                        <th class="px-6 py-3 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800" id="adminFileList">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        async function triggerTraining() {
+            if (!confirm("Start RE-TRAINING the AI Model on new synthetic data? This will take about 30 seconds.")) return;
+
+            const btn = document.querySelector('button[onclick="triggerTraining()"]');
+            const originalHTML = btn.innerHTML;
+            // Minimal Animation: Just spin the icon
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 inline mr-1 animate-spin"></i> Retraining...`;
+            lucide.createIcons();
+            btn.disabled = true;
+
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return window.location.href = 'login.html';
+
+                const res = await fetch('/api/train_model', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                alert("Success: " + data.message + "\nMode: " + data.mode);
+            } catch (e) {
+                alert("Error triggering training: " + e);
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
+
+        // Animated Refresh
+        async function handleRefreshUserList(btn) {
+            const icon = btn.querySelector('svg'); // Lucide renders as SVG
+            if (icon) icon.classList.add('animate-spin');
+
+            await loadUsers();
+
+            // Artificial delay to let user see animation if fetch is too fast
+            setTimeout(() => {
+                if (icon) icon.classList.remove('animate-spin');
+            }, 500);
+        }
+
+        // ... Auth Check ...
+
+        // ... logout ...
+
+        // ... loadStats ...
+
+        async function loadUsers() {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch('/api/admin/users', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const users = await res.json();
+                const tbody = document.getElementById('userList');
+                tbody.innerHTML = users.map(u => `
+                    <tr class="hover:bg-slate-800/50 transition">
+                        <td class="px-6 py-4 font-medium text-white">${u.name} <div class="text-slate-500 text-xs">${u.email}</div></td>
+                        <td class="px-6 py-4"><span class="px-2 py-1 rounded text-xs ${u.role === 'admin' ? 'bg-rose-500/10 text-rose-400' : 'bg-blue-500/10 text-blue-400'} border border-white/5 uppercase font-bold">${u.role}</span></td>
+                        <td class="px-6 py-4 text-slate-400">${new Date(u.createdAt).toLocaleDateString()}</td>
+                        <td class="px-6 py-4 text-right">
+                             <button class="text-slate-400 hover:text-rose-400 transition" onclick="deleteUser(${u.id}, '${u.name}')"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+                lucide.createIcons();
+            } catch (e) { console.error(e); }
+        }
+
+        async function deleteUser(userId, userName) {
+            if (!confirm(`Are you sure you want to permanently delete ${userName}?`)) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    loadUsers(); // Refresh the list
+                    loadStats(); // Update count
+                } else {
+                    alert(data.message || 'Failed to delete user');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error deleting user');
+            }
+        }
+
+        async function loadAdminFiles() {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch('/api/admin/files', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const files = await res.json();
+                const tbody = document.getElementById('adminFileList');
+                if (!tbody) return;
+
+                tbody.innerHTML = files.slice(0, 5).map(f => `
+                    <tr class="hover:bg-slate-800/50 transition">
+                        <td class="px-6 py-3 font-medium text-white flex items-center gap-2">
+                            <i data-lucide="file" class="w-3 h-3 text-slate-500"></i> ${f.originalName}
+                        </td>
+                        <td class="px-6 py-3 text-slate-400">System</td>
+                        <td class="px-6 py-3 text-slate-500 text-xs">${(f.size / 1024).toFixed(1)} KB</td>
+                        <td class="px-6 py-3 text-right">
+                             <a href="#" class="text-blue-400 hover:underline text-xs">Download</a>
+                        </td>
+                    </tr>
+                `).join('');
+                lucide.createIcons();
+            } catch (e) { console.error(e); }
+        }
+
+        // Init
+        loadStats();
+        loadUsers();
+        loadAdminFiles();
+    </script>
+</body>
+
+</html>

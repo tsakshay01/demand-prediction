@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: demand-ai-hybrid
+    env: docker
+    plan: free 
+    branch: main
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: JWT_SECRET
+        generateValue: true

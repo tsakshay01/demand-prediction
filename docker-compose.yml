@@ -1,0 +1,20 @@
+services:
+  # 1. The React/Node Fullstack App
+  web-app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - ML_SERVICE_URL=http://ml-service:5000
+      - JWT_SECRET=docker_dev_secret
+    depends_on:
+      - ml-service
+
+  # 2. The Python AI Engine
+  ml-service:
+    build: ./ml_service
+    ports:
+      - "5000:5000"
+    # Mount volumes for hot-reloading model changes (optional but helpful)
+    volumes:
+      - ./ml_service:/app

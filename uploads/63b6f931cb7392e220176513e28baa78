@@ -1,0 +1,11 @@
+date,product_id,category,sales_volume,price,marketing_spend,event_impact
+2025-01-01,PROD_001,Electronics,120,299.99,500,0
+2025-01-02,PROD_001,Electronics,135,299.99,500,0
+2025-01-03,PROD_001,Electronics,110,299.99,500,0
+2025-01-04,PROD_001,Electronics,190,280.00,800,1
+2025-01-05,PROD_001,Electronics,210,280.00,800,1
+2025-01-01,PROD_002,Fashion,45,49.99,100,0
+2025-01-02,PROD_002,Fashion,50,49.99,100,0
+2025-01-03,PROD_002,Fashion,42,49.99,100,0
+2025-01-04,PROD_002,Fashion,80,45.00,300,1
+2025-01-05,PROD_002,Fashion,95,45.00,300,1

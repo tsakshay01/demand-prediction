@@ -1,0 +1,54 @@
+[
+  {
+    "id": "1",
+    "name": "System Admin",
+    "email": "admin@demand.ai",
+    "password": "admin",
+    "role": "admin",
+    "createdAt": "2026-01-13T17:54:08.063Z",
+    "settings": {
+      "notifications": true,
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "1768326880592",
+    "name": "WebUser",
+    "email": "web@test.com",
+    "password": "pass",
+    "role": "user",
+    "createdAt": "2026-01-13T17:54:40.593Z"
+  },
+  {
+    "id": "1768333289544",
+    "name": "Test User",
+    "email": "test@test.com",
+    "password": "password123",
+    "role": "user",
+    "createdAt": "2026-01-13T19:41:29.546Z"
+  },
+  {
+    "id": "1768334513324",
+    "name": "akshay",
+    "email": "akshayy@gmail.com",
+    "password": "akshay",
+    "role": "user",
+    "createdAt": "2026-01-13T20:01:53.326Z",
+    "settings": {
+      "notifications": false,
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "1768383163098",
+    "name": "aliya",
+    "email": "aliya@gmail.com",
+    "password": "aliya",
+    "role": "user",
+    "createdAt": "2026-01-14T09:32:43.099Z",
+    "settings": {
+      "notifications": false,
+      "theme": "dark"
+    }
+  }
+]

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Upload - DemandAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .upload-zone {
+            border: 2px dashed rgba(52, 211, 153, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: #34d399;
+            background: rgba(52, 211, 153, 0.05);
+        }
+    </style>
+</head>
+
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col hidden md:flex">
+        <div class="h-16 flex items-center px-6 border-b border-slate-800">
+            <div class="flex items-center gap-2 text-emerald-500 font-bold text-xl">
+                <i data-lucide="brain-circuit" class="w-7 h-7"></i>
+                <span>DemandAI</span>
+            </div>
+        </div>
+        <nav class="flex-1 py-6 space-y-1">
+            <a href="index.html"
+                class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-900 transition">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span class="font-medium">Dashboard</span>
+            </a>
+            <a href="#"
+                class="flex items-center gap-3 px-6 py-3 text-emerald-400 bg-emerald-500/10 border-r-2 border-emerald-500">
+                <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                <span class="font-medium">Data Upload</span>
+            </a>
+            <a href="settings.html"
+                class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-900 transition">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span class="font-medium">Settings</span>
+            </a>
+            <a href="analytics.html"
+                class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-900 transition">
+                <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                <span class="font-medium">Analytics</span>
+            </a>
+        </nav>
+        <div class="p-6 border-t border-slate-800">
+            <button onclick="logout()" class="flex items-center gap-2 text-slate-400 hover:text-white transition">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-hidden relative">
+        <header class="h-16 glass-panel border-b border-white/5 flex items-center justify-between px-8">
+            <h1 class="text-lg font-semibold text-white">Data Management</h1>
+            <div class="flex items-center gap-2 text-sm text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                System Ready per upload
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8 space-y-8">
+
+            <!-- Upload Area -->
+            <div class="glass-panel p-8 rounded-xl">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-xl font-bold text-white">Upload New Data</h2>
+                    <a href="sample_demand_data.csv" download
+                        class="text-xs bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg flex items-center gap-2 transition">
+                        <i data-lucide="download" class="w-3 h-3"></i> Download Template (Monthly Time Series)
+                    </a>
+                </div>
+                <p class="text-slate-400 mb-6">Upload 12 rows for a 1-Year Forecast. Support for CSV, JSON.</p>
+
+                <div id="dropZone" class="upload-zone rounded-xl p-12 text-center cursor-pointer relative">
+                    <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onchange="handleFileSelect(this)">
+
+                    <div class="pointer-events-none">
+                        <div
+                            class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-500">
+                            <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-white mb-1">Click to upload or drag and drop</h3>
+                        <p class="text-sm text-slate-500">SVG, PNG, JPG or GIF (max. 800x400px)</p>
+                    </div>
+                </div>
+
+                <div id="uploadProgress" class="hidden mt-6">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-white">Uploading...</span>
+                        <span class="text-emerald-400" id="progressText">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-2">
+                        <div class="bg-emerald-500 h-2 rounded-full transition-all duration-300" style="width: 0%"
+                            id="progressBar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Files -->
+            <div class="glass-panel p-6 rounded-xl">
+                <h3 class="text-lg font-semibold text-white mb-6">Recent Uploads</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-900/50 text-slate-400 border-b border-slate-700/50">
+                            <tr>
+                                <th class="px-6 py-3">Filename</th>
+                                <th class="px-6 py-3">Size</th>
+                                <th class="px-6 py-3">Type</th>
+                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3">Uploaded</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800" id="fileList">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // Auth Check (FIX ISSUE #2)
+        const user = JSON.parse(localStorage.getItem('user'));
+        const token = localStorage.getItem('token');
+        if (!user || !token) {
+            window.location.href = 'login.html';
+        }
+
+        // Logout function (FIX ISSUE #3)
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        // Drag & Drop Visuals
+        const dropZone = document.getElementById('dropZone');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('dragover');
+        }
+
+        // File Handling
+        async function handleFileSelect(input) {
+            const file = input.files[0];
+            if (!file) return;
+            uploadFile(file);
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFileSelect({ files: files });
+        }
+
+        async function uploadFile(file) {
+            // Show Progress
+            document.getElementById('uploadProgress').classList.remove('hidden');
+            const pBar = document.getElementById('progressBar');
+            const pText = document.getElementById('progressText');
+
+            // Simulate progress
+            let p = 0;
+            const interval = setInterval(() => {
+                p += 10;
+                if (p > 90) clearInterval(interval);
+                pBar.style.width = p + '%';
+                pText.innerText = p + '%';
+            }, 50);
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                clearInterval(interval);
+                pBar.style.width = '100%';
+                pText.innerText = '100%';
+
+                setTimeout(() => {
+                    document.getElementById('uploadProgress').classList.add('hidden');
+                    pBar.style.width = '0%';
+
+                    console.log("DEBUG: Upload response:", data);
+                    console.log("DEBUG: Has prediction?", data.prediction);
+
+                    loadFiles();
+
+                    if (data.prediction && data.prediction.success) {
+                        console.log("DEBUG: Storing prediction data...");
+                        // Store for Dashboard Visualization
+                        localStorage.setItem('csv_prediction', JSON.stringify({
+                            data: data.prediction.predictions,
+                            filename: file.name,
+                            timestamp: Date.now()
+                        }));
+
+                        // Show Prediction Result & Redirect (Directly as requested)
+                        // console.log("Success, redirecting...");
+                        window.location.href = 'index.html?view=prediction';
+                    } else {
+                        console.log("DEBUG: No prediction data, showing simple success");
+                        alert('Upload Successful! File stored safely.');
+                    }
+                }, 500);
+
+            } catch (err) {
+                console.error(err);
+                alert('Upload Failed');
+            }
+        }
+
+        async function loadFiles() {
+            try {
+                const token = localStorage.getItem('token');
+                console.log("DEBUG: Token exists?", !!token);
+                if (!token) {
+                    console.warn("No token found - skipping file load");
+                    return;
+                }
+
+                const res = await fetch('/api/user/files', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                console.log("DEBUG: Response status:", res.status);
+                const files = await res.json();
+                console.log("DEBUG: Files response:", files);
+
+                const tbody = document.getElementById('fileList');
+
+                // Handle error responses
+                if (files.error) {
+                    console.error("API Error:", files.error);
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-red-400">Error loading files</td></tr>';
+                    return;
+                }
+
+                if (!Array.isArray(files) || files.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500">No files uploaded yet.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = files.map(f => {
+                    const ext = f.originalName.split('.').pop().toLowerCase();
+                    let icon = 'file';
+                    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) icon = 'image';
+                    if (['csv', 'json', 'xls'].includes(ext)) icon = 'table';
+
+                    return `
+                    <tr class="hover:bg-slate-800/50 transition">
+                        <td class="px-6 py-4 font-medium text-white flex items-center gap-3">
+                            <i data-lucide="${icon}" class="w-4 h-4 text-slate-400"></i>
+                            ${f.originalName}
+                        </td>
+                        <td class="px-6 py-4 text-slate-400">${(f.size / 1024).toFixed(1)} KB</td>
+                        <td class="px-6 py-4 text-slate-500 uppercase text-xs font-mono">${ext}</td>
+                        <td class="px-6 py-4">
+                             <span class="px-2 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Processed</span>
+                        </td>
+                        <td class="px-6 py-4 text-slate-500 text-xs">${new Date(f.uploadedAt).toLocaleDateString()}</td>
+                    </tr>
+                `}).join('');
+                lucide.createIcons();
+            } catch (e) {
+                console.error("loadFiles Error:", e);
+            }
+        }
+
+        // Init
+        loadFiles();
+    </script>
+</body>
+
+</html>

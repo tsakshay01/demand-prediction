@@ -1,0 +1,13 @@
+node_modules/
+.env
+.DS_Store
+*.log
+__pycache__/
+*.h5
+uploads/
+ml_service/__pycache__/
+ml_service/model_weights.h5
+ml_service/dataset.csv
+dist/
+build/
+.vscode/

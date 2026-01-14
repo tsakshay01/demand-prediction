@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1768347734059",
+    "originalName": "sample_demand_data.csv",
+    "filename": "63b6f931cb7392e220176513e28baa78",
+    "size": 544,
+    "uploadedAt": "2026-01-13T23:42:14.060Z",
+    "status": "Processed"
+  },
+  {
+    "id": "1768343222192",
+    "originalName": "test.csv",
+    "filename": "f5f4a5f3f774cd531b49a4e0c2e17f17",
+    "size": 12,
+    "uploadedAt": "2026-01-13T22:27:02.194Z",
+    "status": "Processed"
+  },
+  {
+    "id": "1768340706780",
+    "originalName": ",,.png",
+    "filename": "c3eee615a3537a7eeb39d6aafc25c82f",
+    "size": 79478,
+    "uploadedAt": "2026-01-13T21:45:06.783Z",
+    "status": "Processed"
+  }
+]

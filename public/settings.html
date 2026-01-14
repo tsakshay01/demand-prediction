@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - DemandAI</title>
+    <!-- Fonts & Tailwind -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen flex justify-center p-8">
+
+    <div class="w-full max-w-3xl">
+        <header class="flex items-center gap-4 mb-8">
+            <a href="index.html" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </a>
+            <h1 class="text-2xl font-bold">Account Settings</h1>
+        </header>
+
+        <div class="space-y-6">
+            <!-- Profile Card -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-6">
+                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <i data-lucide="user" class="w-5 h-5 text-emerald-500"></i> Profile
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Full Name</label>
+                        <input type="text" id="name" readonly
+                            class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-slate-300 cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Email</label>
+                        <input type="email" id="email" readonly
+                            class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-slate-300 cursor-not-allowed">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preferences -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-6">
+                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <i data-lucide="bell" class="w-5 h-5 text-emerald-500"></i> Preferences
+                </h2>
+                <div class="flex items-center justify-between py-3 border-b border-slate-800">
+                    <div>
+                        <p class="font-medium">Email Notifications</p>
+                        <p class="text-xs text-slate-400">Receive weekly demand digests</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer">
+                        <div
+                            class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600">
+                        </div>
+                    </label>
+                </div>
+                <div class="flex items-center justify-between py-3">
+                    <div>
+                        <p class="font-medium">Dark Mode</p>
+                        <p class="text-xs text-slate-400">Locked to 'On' by system policy</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-allowed opacity-50">
+                        <input type="checkbox" checked disabled class="sr-only peer">
+                        <div
+                            class="w-11 h-6 bg-slate-800 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 after:translate-x-full">
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="saveSettings()" id="saveBtn"
+                    class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition">Save
+                    Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        if (user.name) {
+            document.getElementById('name').value = user.name;
+            document.getElementById('email').value = user.email;
+            // Init Checkbox
+            if (user.settings && user.settings.notifications) {
+                document.querySelector('input[type="checkbox"]').checked = true;
+            }
+        } else {
+            window.location.href = 'login.html';
+        }
+
+        async function saveSettings() {
+            const btn = document.getElementById('saveBtn');
+            const originalText = btn.innerText;
+            btn.innerText = 'Saving...';
+            btn.disabled = true;
+
+            const settings = {
+                notifications: document.querySelector('input[type="checkbox"]').checked,
+                theme: 'dark' // fixed for now
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch('/api/user/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ email: user.email, settings })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    // Update LocalStorage
+                    user.settings = settings;
+                    localStorage.setItem('user', JSON.stringify(user));
+
+                    btn.innerText = 'Saved!';
+                    setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 2000);
+                } else {
+                    alert('Failed to save settings');
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error connecting to server');
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>
