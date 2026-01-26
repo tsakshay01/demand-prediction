@@ -27,15 +27,20 @@ db.serialize(() => {
         uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Ensure Admin Exists
-    const adminEmail = 'admin@demandai.com';
-    db.get("SELECT id FROM users WHERE email = ?", [adminEmail], async (err, row) => {
+    // Ensure Admin Exists (or update existing user to admin)
+    const adminEmail = 'admin@demand.ai';
+    db.get("SELECT id, role FROM users WHERE email = ?", [adminEmail], async (err, row) => {
         if (!row) {
+            // Create new admin
             const hash = await bcrypt.hash('admin123', 10);
             const stmt = db.prepare("INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)");
-            stmt.run(adminEmail, hash, 'System Admin', 'admin');
+            stmt.run(adminEmail, hash, 'Admin', 'admin');
             stmt.finalize();
-            console.log("✅ Default Admin Created: admin@demandai.com / admin123");
+            console.log("✅ Default Admin Created: admin@demand.ai / admin123");
+        } else if (row.role !== 'admin') {
+            // Update existing user to admin role
+            db.run("UPDATE users SET role = 'admin', name = 'Admin' WHERE email = ?", [adminEmail]);
+            console.log("✅ Updated admin@demand.ai to admin role");
         }
     });
 

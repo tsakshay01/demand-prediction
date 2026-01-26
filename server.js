@@ -14,12 +14,27 @@ const db = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_enterprise_key';
 
-// Middleware
-// FIX: Disable CSP for Demo to prevent Design/CSS blocking
+// FIX: JWT Secret - Warn if not configured, use random fallback in dev
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.warn('⚠️  WARNING: JWT_SECRET not set in .env - using random secret (sessions will not persist across restarts)');
+    JWT_SECRET = require('crypto').randomBytes(64).toString('hex');
+}
+
+// Middleware - Security Headers
+// FIX: Enable CSP with proper whitelist for CDN resources
 app.use(helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://unpkg.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "http://127.0.0.1:5000", "http://localhost:5000"]
+        }
+    },
     crossOriginEmbedderPolicy: false
 }));
 app.use(cors());
@@ -59,10 +74,12 @@ try {
 }
 const ML_SERVICE_URL = 'http://127.0.0.1:5000';
 
-// --- MARKET INTELLIGENCE (Mock/Auto) ---
+// --- MARKET INTELLIGENCE (DEMO/MOCK DATA) ---
+// ⚠️  WARNING: This is SIMULATED data for demonstration purposes only.
+// In production, integrate with real APIs (Weather.com, Twitter API, etc.)
 let AutoSignalContext = {
-    weather: { status: "CLEAR", risk: "LOW" },
-    social: { status: "NORMAL", sentiment: 0.1 }
+    weather: { status: "CLEAR", risk: "LOW", _demo: true },
+    social: { status: "NORMAL", sentiment: 0.1, _demo: true }
 };
 
 setInterval(() => {
@@ -212,6 +229,42 @@ app.post('/api/user/settings', verifyToken, (req, res) => {
     // In a real app, update 'settings' column in SQLite
     // For demo stability, we just acknowledge receipt
     res.json({ success: true, message: "Settings saved" });
+});
+
+// User: Change Password
+app.post('/api/user/change-password', verifyToken, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ success: false, error: "Current and new passwords are required" });
+    }
+
+    if (newPassword.length < 6) {
+        return res.status(400).json({ success: false, error: "New password must be at least 6 characters" });
+    }
+
+    try {
+        db.get("SELECT * FROM users WHERE id = ?", [req.user.id], async (err, user) => {
+            if (err || !user) {
+                return res.status(404).json({ success: false, error: "User not found" });
+            }
+
+            const validPass = await bcrypt.compare(currentPassword, user.password_hash);
+            if (!validPass) {
+                return res.status(401).json({ success: false, error: "Current password is incorrect" });
+            }
+
+            const newHash = await bcrypt.hash(newPassword, 10);
+            db.run("UPDATE users SET password_hash = ? WHERE id = ?", [newHash, req.user.id], (updateErr) => {
+                if (updateErr) {
+                    return res.status(500).json({ success: false, error: "Failed to update password" });
+                }
+                res.json({ success: true, message: "Password changed successfully" });
+            });
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, error: "Server error" });
+    }
 });
 
 // File Upload

@@ -11,19 +11,34 @@ def generate_desc():
     
     return f"{random.choice(adjectives)} {random.choice(colors)} {random.choice(materials)} {random.choice(types)}"
 
-def generate_sales_history(days=30):
+def generate_sales_history(days=60):
     # Scale: Support small biz (50) to Enterprise (2M)
     magnitude = random.choice([100, 1000, 50000, 1000000]) 
     base = random.randint(magnitude // 2, magnitude * 2)
     
-    # Seasonality (Sine wave)
-    seq = np.linspace(0, np.pi * 4, days)
-    seasonality = np.sin(seq) * (base * 0.1) # 10% fluctuation
-    # Noise
-    noise = np.random.normal(0, base * 0.05, days) # 5% noise
+    trend_type = random.choice(['linear_up', 'linear_down', 'flat', 'seasonal', 'random'])
     
-    history = base + seasonality + noise
-    return np.maximum(history, 0).tolist() # Ensure no negative sales
+    x = np.arange(days)
+    if trend_type == 'linear_up':
+        slope = random.uniform(0.01, 0.05) * base
+        history = base + (x * slope)
+    elif trend_type == 'linear_down':
+        slope = random.uniform(0.01, 0.05) * base
+        history = base - (x * slope)
+    elif trend_type == 'flat':
+        history = np.full(days, base)
+    elif trend_type == 'seasonal':
+        # Sine wave
+        seq = np.linspace(0, np.pi * 4, days)
+        history = base + (np.sin(seq) * (base * 0.2))
+    else:
+        history = np.full(days, base)
+        
+    # Add Noise
+    noise = np.random.normal(0, base * 0.05, days)
+    history = history + noise
+    
+    return np.maximum(history, 0).tolist()
 
 def generate_dataset(num_samples=2000, output_file='ml_service/dataset.csv'):
     print(f"Generating {num_samples} synthetic products...")
@@ -38,7 +53,7 @@ def generate_dataset(num_samples=2000, output_file='ml_service/dataset.csv'):
     
     for _ in range(num_samples):
         desc = generate_desc()
-        history = generate_sales_history(30)
+        history = generate_sales_history(60)
         # Target: Demand for next week (simplified: average of history + random growth)
         target = np.mean(history) * (1 + random.choice([-0.1, 0.0, 0.1, 0.2])) 
         

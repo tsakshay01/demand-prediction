@@ -1,0 +1,12 @@
+# DemandAI ML Service Dependencies
+# Locked versions for reproducibility
+
+tensorflow==2.15.0
+transformers==4.36.2
+numpy<2.0
+pandas
+Pillow
+fastapi
+uvicorn
+requests
+python-multipart
