@@ -76,7 +76,8 @@
             const password = document.getElementById('password').value;
 
             btn.disabled = true;
-            btn.innerText = 'Verifying...';
+            btn.innerHTML = '<i class="animate-spin" data-lucide="loader-2"></i> Verifying...';
+            lucide.createIcons();
 
             try {
                 const res = await fetch('/api/auth/login', {
@@ -86,23 +87,21 @@
                 });
                 const data = await res.json();
 
-                if (data.success || data.token) {
+                if (res.ok && data.token) {
                     localStorage.setItem('user', JSON.stringify(data.user));
                     localStorage.setItem('token', data.token);
-                    // Role based redirect
-                    if (data.user.role === 'admin') {
-                        window.location.href = 'admin.html';
-                    } else {
-                        window.location.href = 'index.html';
-                    }
+                    // Clear artifacts
+                    localStorage.removeItem('csv_prediction');
+                    // Always go to main dashboard
+                    window.location.href = 'index.html';
                 } else {
-                    alert(data.message);
+                    alert(data.error || 'Login failed');
                     btn.disabled = false;
                     btn.innerText = 'Sign In';
                 }
             } catch (err) {
                 console.error(err);
-                alert('Server error');
+                alert('Connection refused. Is the server running?');
                 btn.disabled = false;
                 btn.innerText = 'Sign In';
             }

@@ -51,7 +51,7 @@ export default function Signup() {
 
             // Auto-login after successful signup
             login(data.token, { email });
-            navigate('/');
+            navigate('/dashboard');
         } catch (err) {
             setError(err.message);
         } finally {

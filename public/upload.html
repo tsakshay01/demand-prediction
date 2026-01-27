@@ -267,7 +267,7 @@
                         console.log("DEBUG: Storing prediction data...");
                         // Store for Dashboard Visualization
                         localStorage.setItem('csv_prediction', JSON.stringify({
-                            data: data.prediction.predictions,
+                            data: data.prediction.detailed_predictions || data.prediction.predictions, // Support new format
                             filename: file.name,
                             timestamp: Date.now()
                         }));

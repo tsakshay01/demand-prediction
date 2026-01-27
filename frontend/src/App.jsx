@@ -5,6 +5,7 @@ import { AdminRoute } from './components/AdminRoute';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import Landing from './pages/Landing';
 import Upload from './pages/Upload';
 import AdminDashboard from './pages/AdminDashboard';
 import Analytics from './pages/Analytics';
@@ -17,8 +18,9 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/" element={<Landing />} />
           <Route
-            path="/"
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <Dashboard />

@@ -18,7 +18,7 @@ class AdvancedMultimodalModel:
         
         import tensorflow as tf
         from tensorflow.keras.models import Model
-        from tensorflow.keras.layers import Input, Dense, LSTM, Concatenate, Reshape, MultiHeadAttention, Flatten, RepeatVector, Dropout
+        from tensorflow.keras.layers import Input, Dense, LSTM, Concatenate, Reshape, Flatten, RepeatVector, Dropout, Lambda, Softmax, Add, Multiply
         from tensorflow.keras.applications import MobileNetV2
         from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
         from sentence_transformers import SentenceTransformer
@@ -28,8 +28,9 @@ class AdvancedMultimodalModel:
         self.layers = {
             'Input': Input, 'Dense': Dense, 'LSTM': LSTM, 
             'Concatenate': Concatenate, 'Reshape': Reshape, 
-            'MultiHeadAttention': MultiHeadAttention, 'Flatten': Flatten, 
-            'RepeatVector': RepeatVector, 'Dropout': Dropout
+            'Flatten': Flatten, 'RepeatVector': RepeatVector, 
+            'Dropout': Dropout, 'Lambda': Lambda, 'Softmax': Softmax,
+            'Add': Add, 'Multiply': Multiply
         }
         self.preprocess_input = preprocess_input
         
@@ -77,11 +78,30 @@ class AdvancedMultimodalModel:
         ts_enc = self.layers['LSTM'](64, return_sequences=False)(ts_in)
         ts_enc = self.layers['Reshape']((1, 64))(ts_enc)
         
-        # 4. Fusion
-        concat = self.layers['Concatenate'](axis=1)([img_proj, txt_proj, ts_enc])
-        attn = self.layers['MultiHeadAttention'](num_heads=2, key_dim=64)(concat, concat)
-        flat = self.layers['Flatten']()(attn)
-        context = self.layers['Dense'](64, activation='relu')(flat)
+        # 4. Gated Fusion Layer
+        # Flatten each modality embedding to (batch, 64)
+        img_flat = self.layers['Flatten']()(img_proj)  # (batch, 64)
+        txt_flat = self.layers['Flatten']()(txt_proj)  # (batch, 64)
+        ts_flat = self.layers['Flatten']()(ts_enc)     # (batch, 64)
+        
+        # Concatenate for gate computation
+        all_modalities = self.layers['Concatenate'](axis=-1)([img_flat, txt_flat, ts_flat])  # (batch, 192)
+        
+        # Compute 3 gate logits (one per modality)
+        gate_logits = self.layers['Dense'](3, activation=None, name='gate_logits')(all_modalities)
+        gate_weights = self.layers['Softmax'](name='modality_gates')(gate_logits)  # (batch, 3)
+        
+        # Split gates and apply weighted sum
+        gate_img = self.layers['Lambda'](lambda x: x[:, 0:1])(gate_weights)   # (batch, 1)
+        gate_txt = self.layers['Lambda'](lambda x: x[:, 1:2])(gate_weights)   # (batch, 1)
+        gate_ts = self.layers['Lambda'](lambda x: x[:, 2:3])(gate_weights)    # (batch, 1)
+        
+        # Weighted combination of modalities
+        weighted_img = self.layers['Multiply']()([img_flat, gate_img])
+        weighted_txt = self.layers['Multiply']()([txt_flat, gate_txt])
+        weighted_ts = self.layers['Multiply']()([ts_flat, gate_ts])
+        
+        context = self.layers['Add']()([weighted_img, weighted_txt, weighted_ts])  # (batch, 64)
         
         # 5. Output: 7 Days Vector (Log Scale)
         prediction = self.layers['Dense'](7, activation='linear', name='weekly_forecast')(context)
@@ -110,7 +130,28 @@ class AdvancedMultimodalModel:
 
     def predict_single(self, description, sales_history, image_url=None):
         try:
-            # --- 1. Feature Prep ---
+            # --- Log Norm History ---
+            hist = np.array(sales_history if sales_history else [0]*30)
+            if len(hist) > 30: hist = hist[-30:]
+            elif len(hist) < 30: hist = np.pad(hist, (30-len(hist), 0), 'constant')
+            
+            # --- BASELINE FALLBACK for untrained model ---
+            if not self.is_trained:
+                # Use naive baseline: repeat last known value
+                last_val = float(hist[-1]) if len(hist) > 0 else 100.0
+                daily_forecast = [int(round(last_val))] * 7
+                total_prediction = sum(daily_forecast)
+                return {
+                    "prediction": int(total_prediction),
+                    "daily_forecast": daily_forecast,
+                    "confidence_interval": [int(total_prediction*0.8), int(total_prediction*1.2)],
+                    "modalities_used": ["Baseline (Model Untrained)"],
+                    "text_features_active": False,
+                    "ts_features_active": True,
+                    "warning": "Model is untrained. Using naive baseline. Train the model for better predictions."
+                }
+            
+            # --- 1. Feature Prep (only if trained) ---
             img_input = self.preprocess_image(image_url)
             img_feat = self.img_backbone.predict(img_input, verbose=0)
             img_emb = np.mean(img_feat, axis=(1, 2)).reshape(1, -1)  # (1, 1280)
@@ -118,29 +159,22 @@ class AdvancedMultimodalModel:
             # Text embedding using sentence-transformers
             txt_emb = self.text_model.encode([str(description)[:512]])  # (1, 384)
             
-            # --- Log Norm ---
-            hist = np.array(sales_history if sales_history else [0]*30)
-            # Use last 30
-            if len(hist) > 30: hist = hist[-30:]
-            elif len(hist) < 30: hist = np.pad(hist, (30-len(hist), 0), 'constant')
-            
             hist_log = np.log1p(hist)
             ts_in = hist_log.reshape(1, 30, 1)
 
             # --- 2. Predict (Clean - No Leakage) ---
-            # Model trained on Log scale
-            pred_log = self.model.predict([img_emb, txt_emb, ts_in], verbose=0) # (1, 7)
+            pred_log = self.model.predict([img_emb, txt_emb, ts_in], verbose=0)
             
-            # --- 3. Denormalize ---
+            # --- 3. Denormalize with proper rounding ---
             pred = np.expm1(pred_log[0])
-            daily_forecast = np.maximum(pred, 0).astype(int).tolist()
+            daily_forecast = np.maximum(np.round(pred), 0).astype(int).tolist()
             total_prediction = sum(daily_forecast)
 
             return {
                 "prediction": int(total_prediction),
                 "daily_forecast": daily_forecast,
                 "confidence_interval": [int(total_prediction*0.9), int(total_prediction*1.1)],
-                "modalities_used": ["MobileNetV2", "DistilBERT", "LSTM", "Log-Space"],
+                "modalities_used": ["MobileNetV2", "SentenceTransformer", "LSTM", "GatedFusion"],
                 "text_features_active": True,
                 "ts_features_active": True
             }

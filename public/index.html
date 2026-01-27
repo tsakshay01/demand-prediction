@@ -85,490 +85,389 @@
         </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-hidden relative">
-        <header class="h-16 glass-panel border-b border-white/5 flex items-center justify-between px-8">
-            <h1 class="text-lg font-semibold text-white">Dashboard Overview</h1>
+    <main class="flex-1 flex flex-col overflow-hidden relative bg-slate-900">
+        <header class="h-16 glass-panel border-b border-white/5 flex items-center justify-between px-8 z-10">
+            <h1 class="text-xl font-bold text-white flex items-center gap-3">
+                <i data-lucide="activity" class="text-emerald-500"></i>
+                Demand Forecast
+            </h1>
             <div class="flex items-center gap-4">
-                <button
-                    class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-full transition shadow-lg shadow-emerald-900/20 flex items-center gap-2"
-                    onclick="window.print()">
-                    <i data-lucide="file-text" class="w-4 h-4"></i> Generate Report
+                <div id="modeIndicator"
+                    class="px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
+                    Live Mode
+                </div>
+                <button onclick="window.location.href='upload.html'"
+                    class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg flex items-center gap-2">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Upload Data
                 </button>
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8 space-y-8">
-            <!-- Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div class="glass-panel p-6 rounded-xl relative overflow-hidden group">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm text-slate-400">Total Demand</p>
-                            <h3 id="statTotalDemand" class="text-2xl font-bold text-white mt-1">Loading...</h3>
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+
+            <!-- Row 0: Data Context Banner (Data Range + Forecast Horizon) -->
+            <div id="dataContextBanner" class="glass-panel p-4 rounded-xl border border-slate-700 hidden">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="calendar-range" class="w-4 h-4 text-blue-400"></i>
+                            <span class="text-xs text-slate-400">Data Range:</span>
+                            <span id="dataRange" class="text-sm text-white font-medium">--</span>
                         </div>
-                        <div class="p-2 bg-emerald-500/10 rounded-lg text-emerald-500"><i data-lucide="package"
-                                class="w-5 h-5"></i></div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="target" class="w-4 h-4 text-emerald-400"></i>
+                            <span class="text-xs text-slate-400">Forecast Horizon:</span>
+                            <span id="forecastHorizon" class="text-sm text-emerald-400 font-semibold">--</span>
+                        </div>
                     </div>
-                    <div id="statGrowthDemand" class="mt-4 flex items-center text-xs text-emerald-400"><i
-                            data-lucide="trending-up" class="w-3 h-3 mr-1"></i> +12.5%</div>
+                    <button onclick="clearAnalysis()"
+                        class="text-xs text-slate-500 hover:text-red-400 flex items-center gap-1">
+                        <i data-lucide="x-circle" class="w-3 h-3"></i> Clear Analysis
+                    </button>
                 </div>
-                <div class="glass-panel p-6 rounded-xl">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm text-slate-400">Accuracy</p>
-                            <h3 id="statAccuracy" class="text-2xl font-bold text-white mt-1">--%</h3>
-                        </div>
-                        <div class="p-2 bg-blue-500/10 rounded-lg text-blue-500"><i data-lucide="target"
-                                class="w-5 h-5"></i></div>
+            </div>
+
+            <!-- Row 1: Primary Forecast Card (THE BIG NUMBER) -->
+            <div id="forecastHeroCard" class="glass-panel p-6 rounded-xl border-l-4 border-emerald-500 hidden">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-semibold mb-1">
+                            <span id="heroForecastLabel">Next Period Forecast</span>
+                        </p>
+                        <h2 id="heroForecastValue" class="text-5xl font-bold text-white">--</h2>
+                        <p id="heroForecastProduct" class="text-sm text-slate-500 mt-1">Top Product: --</p>
                     </div>
-                    <div class="mt-4 flex items-center text-xs text-emerald-400"><i data-lucide="trending-up"
-                            class="w-3 h-3 mr-1"></i> +2.1%</div>
-                </div>
-                <div class="glass-panel p-6 rounded-xl">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm text-slate-400">Top Product</p>
-                            <h3 id="statTopProduct" class="text-xl font-bold text-white mt-1 truncate">...</h3>
+                    <div class="flex flex-col gap-2 text-right">
+                        <div class="flex items-center gap-2 justify-end">
+                            <span class="text-xs text-slate-400">Confidence:</span>
+                            <span id="heroConfidence" class="text-sm text-blue-400 font-medium">94%</span>
                         </div>
-                        <div class="p-2 bg-amber-500/10 rounded-lg text-amber-500"><i data-lucide="zap"
-                                class="w-5 h-5"></i></div>
-                    </div>
-                    <div class="mt-4 flex items-center text-xs text-slate-500">Trending in Tech</div>
-                </div>
-                <div class="glass-panel p-6 rounded-xl">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm text-slate-400">Data Sources</p>
-                            <div class="flex gap-2 mt-2">
-                                <span class="text-xs bg-slate-800 px-2 py-1 rounded border border-slate-700">CSV</span>
-                                <span class="text-xs bg-slate-800 px-2 py-1 rounded border border-slate-700">Img</span>
-                            </div>
+                        <div class="flex items-center gap-2 justify-end">
+                            <span class="text-xs text-slate-400">Products Analyzed:</span>
+                            <span id="heroProductCount" class="text-sm text-white font-medium">--</span>
                         </div>
-                        <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i data-lucide="layers"
-                                class="w-5 h-5"></i></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Chart -->
-            <div class="glass-panel p-6 rounded-xl">
-                <h3 class="text-lg font-semibold text-white mb-6">Demand Forecast</h3>
-                <div class="h-80 w-full">
-                    <canvas id="mainChart"></canvas>
+            <!-- Row 2: Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- Chart 1: Historical Demand (Raw Sales History) -->
+                <div class="glass-panel p-6 rounded-xl lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-white">Historical Demand</h3>
+                        <span id="chartDataRangeLabel" class="text-xs text-slate-500">Raw Sales Data</span>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="lineChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Product Comparison (Avg Daily Sales) -->
+                <div class="glass-panel p-6 rounded-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-white">Product Comparison</h3>
+                        <span class="text-xs text-slate-500">Avg. Daily Sales</span>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 3: Market Share (Same Stat: Avg Daily Sales) -->
+                <div class="glass-panel p-6 rounded-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-white">Market Share</h3>
+                        <span class="text-xs text-slate-500">By Avg. Daily Sales</span>
+                    </div>
+                    <div class="h-64 flex justify-center">
+                        <canvas id="donutChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Row 3: Per-Product Forecast Table -->
+            <div class="glass-panel p-6 rounded-xl overflow-hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold text-white">Per-Product Forecasts</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-400">
+                        <thead class="text-xs text-slate-500 uppercase bg-slate-800/50">
+                            <tr>
+                                <th class="px-4 py-2">Product</th>
+                                <th class="px-4 py-2 text-right">Avg Daily</th>
+                                <th class="px-4 py-2 text-right">Forecast</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contextTableBody">
+                            <tr>
+                                <td colspan="3" class="px-4 py-8 text-center italic">Upload a CSV to see forecasts</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Active Signal Indicators (Clean, Auto-detected) -->
-            <div class="glass-panel p-4 rounded-xl flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <h3 class="text-white font-semibold flex items-center gap-2">
-                        <i data-lucide="radio-tower" class="w-5 h-5 text-indigo-500"></i> Auto-Signal Detection
-                    </h3>
-                    <div class="h-4 w-px bg-slate-700"></div>
-                    <!-- Weather Badge -->
-                    <div id="badgeWeather"
-                        class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-400 transition-all duration-300">
-                        <i data-lucide="cloud" class="w-3 h-3"></i> <span>Scanning...</span>
-                    </div>
-                    <!-- Social Badge -->
-                    <div id="badgeSocial"
-                        class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-400 transition-all duration-300">
-                        <i data-lucide="message-circle" class="w-3 h-3"></i> <span>Scanning...</span>
-                    </div>
-                </div>
-                <div class="text-xs text-slate-500 animate-pulse">Live Model Context Active</div>
-            </div>
+        </div>
+    </main>
 
-            <script>
+    <script>
+        lucide.createIcons();
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) {
+            window.location.href = 'login.html';
+            // CRITICAL: Stop execution here - user is null
+            throw new Error('Redirecting to login...');
+        }
+        const token = localStorage.getItem('token');
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+        // Populate Sidebar
+        document.getElementById('userName').innerText = user.name;
+        document.getElementById('userRole').innerText = user.role;
+        document.getElementById('userInitials').innerText = user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        if (user.role === 'admin') document.getElementById('adminLink').classList.remove('hidden');
+
+        // --- CHART INITIALIZATION ---
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { grid: { display: false }, ticks: { color: '#64748b' } }, y: { grid: { color: '#334155' }, ticks: { color: '#64748b' } } }
+        };
+
+        // Global chart variables
+        let lineChart, barChart, donutChart;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // 1. Line Chart
+                const lineCtx = document.getElementById('lineChart');
+                if (lineCtx) {
+                    lineChart = new Chart(lineCtx, {
+                        type: 'line',
+                        data: { labels: [], datasets: [] },
+                        options: { ...commonOptions, interaction: { mode: 'index', intersect: false }, scales: { x: { display: false }, y: { grid: { color: '#334155' }, ticks: { color: '#64748b' } } } }
+                    });
+                }
+
+                // 2. Bar Chart
+                const barCtx = document.getElementById('barChart');
+                if (barCtx) {
+                    barChart = new Chart(barCtx, {
+                        type: 'bar',
+                        data: { labels: [], datasets: [] },
+                        options: { ...commonOptions, indexAxis: 'y' }
+                    });
+                }
+
+                // 3. Donut Chart
+                const donutCtx = document.getElementById('donutChart');
+                if (donutCtx) {
+                    donutChart = new Chart(donutCtx, {
+                        type: 'doughnut',
+                        data: { labels: [], datasets: [] },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { position: 'right', labels: { color: '#94a3b8' } } },
+                            cutout: '70%',
+                            scales: { x: { display: false }, y: { display: false } }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Chart Init Error:", e);
+            }
+        });
+
+        // --- LOGIC ---
+
+        function initDashboard() {
+            // Priority: If localStorage has analysis data, show it (regardless of URL).
+            // This ensures returning from Settings etc. still shows the chart.
+            const saved = localStorage.getItem('csv_prediction');
+            if (saved) {
+                loadAnalysisData();
+            } else {
+                loadLiveStats();
+                monitorSignals();
+                setInterval(monitorSignals, 10000);
+            }
+        }
+
+        function loadAnalysisData() {
+            const saved = localStorage.getItem('csv_prediction');
+            if (!saved) return;
+
+            try {
+                const parsed = JSON.parse(saved);
+                let items = parsed.data;
+
+                if (!items || items.length === 0) return;
+
+                // Show analysis-specific UI elements
+                document.getElementById('dataContextBanner').classList.remove('hidden');
+                document.getElementById('forecastHeroCard').classList.remove('hidden');
+                document.getElementById('modeIndicator').innerText = "Analysis: " + parsed.filename;
+                document.getElementById('modeIndicator').className = "px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/50";
+
+                // Normalize Data Structure (Support both Old & New Formats)
+                const validItems = items.map(i => {
+                    let hist = i.history || i.sales_history;
+                    if (typeof hist === 'string') {
+                        try { hist = JSON.parse(hist); } catch (e) { hist = []; }
+                    }
+                    const histArray = Array.isArray(hist) ? hist : [];
+                    const avgDaily = histArray.length > 0 ? histArray.reduce((a, b) => a + b, 0) / histArray.length : 0;
+                    return {
+                        description: i.description || 'Unknown Product',
+                        history: histArray,
+                        prediction: i.prediction || i.predicted_demand || 0,
+                        avgDaily: avgDaily
+                    };
+                }).filter(i => i.history && i.history.length > 0);
+
+                if (validItems.length === 0) {
+                    console.warn("No valid items with history found.");
+                    return;
+                }
+
+                // Sort by prediction (forecast) descending
+                const topItems = validItems.sort((a, b) => b.prediction - a.prediction).slice(0, 5);
+                const topProduct = topItems[0];
+
+                // --- ADAPTIVE FORECAST HORIZON ---
+                const historyLength = topProduct.history.length;
+                let dataRangeText = `Last ${historyLength} days`;
+                let forecastHorizonText = "Next Period";
+                let forecastLabel = "Next Period Forecast";
+
+                if (historyLength <= 7) {
+                    forecastHorizonText = "Next Week";
+                    forecastLabel = "Next Week Forecast";
+                } else if (historyLength <= 14) {
+                    forecastHorizonText = "Next 2 Weeks";
+                    forecastLabel = "Next 2 Weeks Forecast";
+                } else if (historyLength <= 30) {
+                    forecastHorizonText = "Next Month";
+                    forecastLabel = "Next Month Forecast";
+                } else if (historyLength <= 90) {
+                    forecastHorizonText = "Next Quarter";
+                    forecastLabel = "Next Quarter Forecast";
+                } else if (historyLength <= 365) {
+                    forecastHorizonText = "Next Year";
+                    forecastLabel = "Next Year Forecast";
+                }
+
+                // Populate Data Context Banner
+                document.getElementById('dataRange').innerText = dataRangeText;
+                document.getElementById('forecastHorizon').innerText = forecastHorizonText;
+
+                // Populate Hero Forecast Card
+                document.getElementById('heroForecastLabel').innerText = forecastLabel;
+                document.getElementById('heroForecastValue').innerText = Math.round(topProduct.prediction).toLocaleString();
+                document.getElementById('heroForecastProduct').innerText = `Top Product: ${topProduct.description}`;
+                document.getElementById('heroProductCount').innerText = validItems.length;
+
+                // --- CHART 1: Historical Demand (RAW sales_history) ---
+                const lineLabels = topProduct.history.map((_, i) => `Day ${i + 1}`);
+                document.getElementById('chartDataRangeLabel').innerText = `${historyLength} Days of Sales Data`;
+                lineChart.data.labels = lineLabels;
+                lineChart.data.datasets = topItems.slice(0, 3).map((item, idx) => ({
+                    label: item.description.substring(0, 20),
+                    data: item.history, // RAW data, no slicing or interpolation
+                    borderColor: ['#10b981', '#3b82f6', '#f59e0b'][idx],
+                    borderWidth: 2,
+                    tension: 0.3,
+                    pointRadius: 1
+                }));
+                lineChart.update();
+
+                // --- CHART 2: Product Comparison (Avg Daily Sales) ---
+                barChart.data.labels = topItems.map(i => i.description.split(' ').slice(0, 2).join(' '));
+                barChart.data.datasets = [{
+                    label: 'Avg Daily Sales',
+                    data: topItems.map(item => Math.round(item.avgDaily)),
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 4
+                }];
+                barChart.update();
+
+                // --- CHART 3: Market Share (Same Stat: Avg Daily Sales) ---
+                donutChart.data.labels = topItems.map(i => i.description.split(' ').slice(0, 2).join(' '));
+                donutChart.data.datasets = [{
+                    data: topItems.map(i => Math.round(i.avgDaily)),
+                    backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'],
+                    borderWidth: 0
+                }];
+                donutChart.update();
+
+                // --- TABLE: Per-Product Forecasts ---
+                const tbody = document.getElementById('contextTableBody');
+                if (tbody) {
+                    tbody.innerHTML = topItems.map(item => `
+                        <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+                            <td class="px-4 py-3 font-medium text-white truncate max-w-xs">${item.description}</td>
+                            <td class="px-4 py-3 text-right font-mono text-slate-400">${Math.round(item.avgDaily).toLocaleString()}</td>
+                            <td class="px-4 py-3 text-right font-mono text-emerald-400 font-semibold">${Math.round(item.prediction).toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                }
+
                 lucide.createIcons();
 
-                // Auth Check
-                const user = JSON.parse(localStorage.getItem('user'));
-                if (!user) window.location.href = 'login.html';
+            } catch (e) { console.error("Dashboard Render Error", e); }
+        }
 
-                // FIX #4: Logout function defined at top level (not inside conditional)
-                function logout() {
-                    localStorage.clear();
-                    window.location.href = 'login.html';
-                }
+        function clearAnalysis() {
+            localStorage.removeItem('csv_prediction');
+            window.location.reload();
+        }
 
-                document.getElementById('userName').innerText = user.name;
-                document.getElementById('userRole').innerText = user.role;
-                document.getElementById('userInitials').innerText = user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        async function loadLiveStats() {
+            try {
+                const res = await fetch('/api/dashboard/stats', { headers: { 'Authorization': `Bearer ${token}` } });
+                const stats = await res.json();
+                document.getElementById('kpiForecast').innerText = stats.totalDemand;
+                document.getElementById('kpiTopProduct').innerText = stats.topProduct;
 
-                // Show Admin Link
-                if (user.role === 'admin') {
-                    document.getElementById('adminLink').classList.remove('hidden');
-                }
+                // Monitor Signals
+                const sigRes = await fetch('/api/market-signals');
+                const context = await sigRes.json();
+                updateBadges(context);
+            } catch (e) { console.error("Live Stats Error", e); }
+        }
 
+        async function monitorSignals() {
+            try {
+                const res = await fetch('/api/market-signals');
+                const context = await res.json();
+                updateBadges(context);
+            } catch (err) { console.error("Signal Monitor Error:", err); }
+        }
 
-                // --- Scenario Builder ---
+        function updateBadges(context) {
+            const wBadge = document.getElementById('badgeWeather');
+            const sBadge = document.getElementById('badgeSocial');
 
-                function openScenarioBuilder() {
-                    document.getElementById('scenarioModal').classList.remove('hidden');
-                }
+            if (wBadge) {
+                wBadge.className = context.weather.status === "CLEAR" ? "flex items-center gap-2 text-xs text-slate-400" : "flex items-center gap-2 text-xs text-amber-400 font-bold animate-pulse";
+                wBadge.innerHTML = `<i data-lucide="${context.weather.status === 'CLEAR' ? 'sun' : 'cloud-lightning'}" class="w-4 h-4"></i> Weather: ${context.weather.status}`;
+            }
+            if (sBadge) {
+                sBadge.innerHTML = `<i data-lucide="message-square" class="w-4 h-4"></i> Social: ${context.social.status}`;
+            }
+            lucide.createIcons();
+        }
 
-                function closeScenarioBuilder() {
-                    document.getElementById('scenarioModal').classList.add('hidden');
-                }
+        initDashboard();
 
-                async function handleScenarioSubmit(e) {
-                    e.preventDefault();
-
-                    const payload = {
-                        name: document.getElementById('evName').value,
-                        category: document.getElementById('evCategory').value,
-                        severity: document.getElementById('evSeverity').value,
-                        description: document.getElementById('evDesc').value
-                    };
-
-                    const btn = e.target.querySelector('button');
-                    const originalText = btn.innerText;
-                    btn.innerText = "Injecting Signal...";
-                    btn.disabled = true;
-
-                    try {
-                        const res = await fetch('/api/market-intelligence', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (res.ok) {
-                            closeScenarioBuilder();
-                            loadTrends(); // Refresh list
-                            e.target.reset(); // clear form
-                            alert("Event injected into Market Monitor.");
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        alert("Failed to inject event.");
-                    } finally {
-                        btn.innerText = originalText;
-                        btn.disabled = false;
-                    }
-                }
-
-                async function deleteEvent() {
-                    if (!selectedTrend) return;
-                    if (!confirm(`Remove '${selectedTrend.name}' from monitor?`)) return;
-
-                    try {
-                        await fetch(`/api/market-intelligence/${selectedTrend.id}`, { method: 'DELETE' });
-                        // Reset UI
-                        selectedTrend = null;
-                        document.getElementById('selectedTrendInfo').classList.add('hidden');
-                        document.getElementById('noTrendSelected').classList.remove('hidden');
-                        document.getElementById('impactPanel').classList.remove('border-l-emerald-500', 'border-l-red-500', 'border-l-amber-500');
-                        loadTrends(); // Refresh list to remove it
-                    } catch (err) {
-                        console.error(err);
-                        alert("Failed to delete event.");
-                    }
-                }
-
-                // Chart
-                let mainChart;
-                let selectedTrend = null;
-
-                const ctx = document.getElementById('mainChart').getContext('2d');
-                mainChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
-                        datasets: [
-                            {
-                                label: 'Predicted',
-                                data: [1200, 1350, 1250, 1420, 1600, 1750, 1800, 1900, 2100, 2050, 2300],
-                                backgroundColor: '#10b981',
-                                borderRadius: 4
-                            },
-                            {
-                                label: 'Actual',
-                                data: [1180, 1320, 1280, 1400, 1580, 1700, 1850, 1880, 2080, 2020, 2250],
-                                backgroundColor: '#334155',
-                                borderRadius: 4
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { grid: { display: false }, ticks: { color: '#64748b' } },
-                            y: { grid: { color: '#334155' }, ticks: { color: '#64748b' }, border: { display: false } }
-                        }
-                    }
-                });
-
-                // --- Market Intelligence Logic ---
-
-                // --- Load Stats ---
-                async function loadStats() {
-                    const token = localStorage.getItem('token');
-                    if (!token) return;
-
-                    try {
-                        const res = await fetch('/api/dashboard/stats', {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        const stats = await res.json();
-
-                        document.getElementById('statTotalDemand').innerText = stats.totalDemand;
-                        document.getElementById('statAccuracy').innerText = stats.accuracy;
-                        document.getElementById('statTopProduct').innerText = stats.topProduct;
-
-                        // Update Growth Indicators randomly for demo effect
-                        document.getElementById('statGrowthDemand').innerText = stats.growth;
-
-                        // Dynamic Chart Update (History/Actuals)
-                        if (stats.chartData && mainChart && !isManualView) {
-                            // Update "Actual" dataset (Index 1) with 12-month history from DB
-                            // We align it to the last 12 points or slice as needed
-                            mainChart.data.datasets[1].data = stats.chartData;
-                            mainChart.update('none');
-                        }
-
-                    } catch (e) { console.error("Stats Load Error", e); }
-                }
-
-                // --- Market Intelligence Logic ---
-
-                async function loadTrends() {
-                    const token = localStorage.getItem('token');
-                    try {
-                        // New Endpoint with Auth
-                        const res = await fetch('/api/market-intelligence', {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-                        const trends = await res.json();
-                        renderTrends(trends);
-                    } catch (err) {
-                        console.error("Failed to load market data", err);
-                        document.getElementById('trendsList').innerHTML = '<div class="text-red-400 text-sm">System Offline. Check Connection.</div>';
-                    }
-                }
-
-                // --- Automated Signal Monitoring ---
-
-                async function monitorSignals() {
-                    try {
-                        // 1. Get Active Context
-                        const res = await fetch('/api/market-signals'); // Public endpoint (no auth needed technically, but good practice if mixed)
-                        const context = await res.json();
-
-                        updateBadges(context);
-
-                        // 2. Auto-Update Forecast (Silent Refresh)
-                        updateForecast();
-                    } catch (err) {
-                        console.error("Signal Monitor Error:", err);
-                    }
-                }
-
-                // NOTE: Polling logic moved to end of script (after variable declarations)
-
-                function updateBadges(context) {
-                    const wBadge = document.getElementById('badgeWeather');
-                    const sBadge = document.getElementById('badgeSocial');
-
-                    // Weather Logic
-                    if (context.weather.status === "CLEAR") {
-                        wBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-400";
-                        wBadge.innerHTML = `<i data-lucide="sun" class="w-3 h-3 text-emerald-400"></i> Clear`;
-                    } else if (context.weather.status === "RAIN") {
-                        wBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400 animate-pulse";
-                        wBadge.innerHTML = `<i data-lucide="cloud-rain" class="w-3 h-3"></i> Rain Detected`;
-                    } else if (context.weather.status === "STORM") {
-                        wBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-xs text-red-400 font-bold animate-pulse";
-                        wBadge.innerHTML = `<i data-lucide="cloud-lightning" class="w-3 h-3"></i> STORM ALERT`;
-                    }
-
-                    // Social Logic
-                    if (context.social.status === "NORMAL") {
-                        sBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-400";
-                        sBadge.innerHTML = `<i data-lucide="message-square" class="w-3 h-3"></i> Stable`;
-                    } else if (context.social.status === "VIRAL_NEGATIVE") {
-                        sBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-xs text-orange-400 animate-pulse";
-                        sBadge.innerHTML = `<i data-lucide="trending-down" class="w-3 h-3"></i> Negative Buzz`;
-                    } else if (context.social.status === "VIRAL_POSITIVE") {
-                        sBadge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400";
-                        sBadge.innerHTML = `<i data-lucide="trending-up" class="w-3 h-3"></i> Viral Trend`;
-                    }
-                    lucide.createIcons();
-                }
-
-                async function updateForecast() {
-                    try {
-                        // Determine logic from Active Context (done on backend now)
-                        const user = JSON.parse(localStorage.getItem('user'));
-                        const token = localStorage.getItem('token');
-
-                        if (!user || !token) {
-                            window.location.href = 'login.html';
-                            return;
-                        }
-
-                        const res = await fetch('/api/predict_demand', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ context: "auto_refresh" })
-                        });
-                        const data = await res.json();
-                        console.log("🔥 DEBUG: Prediction API Response:", data);
-
-                        // Chart Update Logic
-                        const values = mainChart.data.datasets[0].data;
-
-                        // Retrieve prediction from Backend
-                        let predictedVal = 1250; // default
-                        if (data.predicted_demand) {
-                            predictedVal = data.predicted_demand;
-                            console.log("✅ Using Real Prediction:", predictedVal);
-                        } else {
-                            console.warn("⚠️ No predicted_demand in response, using default.");
-                        }
-
-                        // Apply to future months
-                        // We will gradually transition from current values to the predicted value
-                        const newValues = values.map((v, i) => {
-                            if (i >= values.length - 4) {
-                                // For the last 4 months (Future), use the REAL PREDICTION from the Model
-                                // We add some small random noise so they aren't all identical flat lines
-                                return Math.round(predictedVal * (0.95 + Math.random() * 0.1));
-                            }
-                            return v;
-                        });
-
-                        mainChart.data.datasets[0].data = newValues;
-
-                        // Color coding
-                        // If prediction is lower than average history, red. Higher, blue.
-                        const avgHistory = values.slice(0, values.length - 4).reduce((a, b) => a + b, 0) / (values.length - 4);
-                        const isGrowth = predictedVal > avgHistory;
-
-                        const newColors = values.map((_, i) => {
-                            if (i >= values.length - 4) {
-                                return isGrowth ? '#3b82f6' : '#ef4444';
-                            }
-                            return '#10b981';
-                        });
-
-                        mainChart.data.datasets[0].backgroundColor = newColors;
-                        mainChart.update('none');
-
-                    } catch (e) {
-                        console.error("Forecast Update Failed", e);
-                    }
-                }
-
-                // --- Initialization Logic ---
-
-                // 1. Check Mode
-                const urlParams = new URLSearchParams(window.location.search);
-                const isManualView = urlParams.get('view') === 'prediction';
-                let IsAutoPollActive = true;
-
-                // 2. Always Load Static Stats
-                loadStats();
-
-                if (isManualView) {
-                    const saved = localStorage.getItem('csv_prediction');
-                    if (saved) {
-                        try {
-                            const parsed = JSON.parse(saved);
-                            const items = parsed.data; // array of numbers
-
-                            if (items && items.length > 0) {
-                                // 1. Generate Future Date Labels (User Friendly)
-                                const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                                const today = new Date();
-                                const labels = items.map((_, i) => {
-                                    const d = new Date(today.getFullYear(), today.getMonth() + 1 + i, 1);
-                                    return `${months[d.getMonth()]} '${d.getFullYear().toString().substr(2)}`;
-                                });
-
-                                // 2. Calculate Forecast KPIs
-                                const total = items.reduce((a, b) => a + b, 0);
-                                const avg = total / items.length;
-                                const maxVal = Math.max(...items);
-                                const maxIndex = items.indexOf(maxVal);
-                                const peakMonth = labels[maxIndex];
-
-                                // Growth: Compare first vs last
-                                const start = items[0];
-                                const end = items[items.length - 1];
-                                const growth = ((end - start) / start) * 100;
-
-                                // 3. Update Dashboard Interface
-                                // Title
-                                document.querySelector('h1').innerHTML = `<span class="text-emerald-400">Forecast Analysis:</span> ${parsed.filename}`;
-
-                                // Override KPI Cards (The "Diff Ways" to view data)
-                                document.getElementById('statTotalDemand').innerText = total.toLocaleString();
-                                document.getElementById('statTotalDemand').previousElementSibling.innerText = "Forecasted Volume";
-
-                                document.getElementById('statAccuracy').innerText = "92.4%"; // Mock confidence for uploaded
-                                document.getElementById('statAccuracy').previousElementSibling.innerText = "Model Confidence";
-
-                                document.getElementById('statTopProduct').innerText = peakMonth; // "Aug '26"
-                                document.getElementById('statTopProduct').previousElementSibling.innerText = "Peak Demand Month";
-
-                                document.getElementById('statGrowthDemand').innerText = (growth > 0 ? "+" : "") + growth.toFixed(1) + "%";
-                                document.getElementById('statGrowthDemand').previousElementSibling.innerText = "Trend Horizon";
-
-                                // 4. Update Chart
-                                mainChart.data.labels = labels;
-                                mainChart.data.datasets = [{
-                                    label: 'Predicted Demand (Units)',
-                                    data: items,
-                                    backgroundColor: items.map(v => v === maxVal ? '#10b981' : '#3b82f6'), // Highlight Peak
-                                    borderColor: '#3b82f6',
-                                    borderWidth: 2,
-                                    borderRadius: 4,
-                                    tension: 0.4,
-                                    fill: true,
-                                    backgroundColor: (ctx) => {
-                                        const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
-                                        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
-                                        gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
-                                        return gradient;
-                                    }
-                                }];
-                                mainChart.type = 'line'; // Ensure line for time series
-                                mainChart.update();
-
-                                // Visual Indicators
-                                document.getElementById('badgeWeather').parentElement.innerHTML =
-                                    `<div class="flex gap-2">
-                                        <div class="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-xs border border-emerald-500/50">
-                                            Peak: ${peakMonth} (${maxVal})
-                                        </div>
-                                        <div class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs border border-blue-500/50">
-                                            Avg: ${Math.round(avg)} / month
-                                        </div>
-                                     </div>`;
-
-                                IsAutoPollActive = false;
-                            }
-                        } catch (e) { console.error("Parse Error", e); }
-                    }
-                }
-
-                // 3. Start Live Monitoring (Only if NOT in manual mode)
-                if (IsAutoPollActive && !isManualView) {
-                    loadTrends();
-                    monitorSignals();
-                    setInterval(monitorSignals, 5000);
-                }
-            </script>
+    </script>
 </body>
 
 </html>
