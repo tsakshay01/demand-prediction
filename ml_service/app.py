@@ -30,7 +30,7 @@ app.add_middleware(
 
 # Global Model Instance
 print("Loading Advanced Multimodal Model...")
-demand_model = AdvancedMultimodalModel(model_dir='ml_service')
+demand_model = AdvancedMultimodalModel(model_dir='.')
 print("Model loaded!")
 
 # --- Data Models ---
@@ -182,7 +182,7 @@ def train():
     def training_task():
         print("Starting training task...")
         try:
-            history = demand_model.train(csv_path='ml_service/dataset.csv')
+            history = demand_model.train_model(csv_path='dataset.csv')
             print(f"Training finished. MSE: {history['loss'][-1]:.2f}")
         except Exception as e:
             print(f"Training failed: {e}")
@@ -195,6 +195,34 @@ def train():
         "mode": "MobileNetV2-DistilBERT-LSTM",
         "estimated_duration": "Demo Mode: 5-10s"
     }
+
+# --- Evaluation Endpoint ---
+from evaluate_model import evaluate_predictions, print_evaluation_report
+
+class EvaluateRequest(BaseModel):
+    file_path: str
+
+@app.post("/evaluate")
+def evaluate(data: EvaluateRequest):
+    file_path = data.file_path
+    if not file_path or not os.path.exists(file_path):
+        raise HTTPException(status_code=400, detail="File not found")
+
+    print(f"Evaluating predictions on: {file_path}")
+    try:
+        results = evaluate_predictions(demand_model, file_path)
+        if 'error' in results:
+            raise HTTPException(status_code=400, detail=results['error'])
+
+        # Also print to console for easy viewing
+        print_evaluation_report(results)
+
+        return results
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)

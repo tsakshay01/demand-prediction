@@ -358,6 +358,18 @@ app.post('/api/train_model', verifyToken, async (req, res) => {
     }
 });
 
+// Evaluate Model
+app.post('/api/evaluate', verifyToken, async (req, res) => {
+    try {
+        if (!axios) throw new Error("Axios not installed");
+        const response = await axios.post(`${ML_SERVICE_URL}/evaluate`, req.body, { timeout: 120000 });
+        res.json(response.data);
+    } catch (error) {
+        console.error("Evaluate Error:", error.message);
+        res.status(500).json({ error: error.message || "Evaluation failed" });
+    }
+});
+
 // Start Server
 if (require.main === module) {
     app.listen(PORT, () => {

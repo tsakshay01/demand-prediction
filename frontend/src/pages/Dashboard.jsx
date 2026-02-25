@@ -65,8 +65,9 @@ export default function Dashboard() {
         }
         const { history, prediction, avgDaily } = selectedProduct;
         const histPeak = history.length > 0 ? Math.max(...history) : 0;
-        const estimatedMonthly = avgDaily * 30;
-        const growth = estimatedMonthly > 0 ? ((prediction - estimatedMonthly) / estimatedMonthly) * 100 : 0;
+        const forecastDays = (selectedProduct.daily_forecast && selectedProduct.daily_forecast.length > 0) ? selectedProduct.daily_forecast.length : 7;
+        const forecastDailyAvg = forecastDays > 0 ? prediction / forecastDays : 0;
+        const growth = avgDaily > 0 ? ((forecastDailyAvg - avgDaily) / avgDaily) * 100 : 0;
         return {
             forecast: Math.round(prediction),
             histPeak: Math.round(histPeak),
